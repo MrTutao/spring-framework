@@ -1,11 +1,11 @@
 /*
- * Copyright 2002-2018 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *      https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,7 +19,6 @@ package org.springframework.test.context.junit.jupiter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
-
 import javax.sql.DataSource;
 
 import org.junit.jupiter.api.DynamicTest;
@@ -32,8 +31,6 @@ import org.junit.platform.launcher.TestIdentifier;
 import org.junit.platform.launcher.core.LauncherFactory;
 import org.junit.platform.launcher.listeners.SummaryGeneratingListener;
 import org.junit.platform.launcher.listeners.TestExecutionSummary;
-
-import org.opentest4j.AssertionFailedError;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -48,10 +45,12 @@ import org.springframework.test.context.transaction.BeforeTransaction;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.junit.jupiter.api.DynamicTest.*;
-import static org.junit.platform.engine.discovery.DiscoverySelectors.*;
-import static org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.fail;
+import static org.assertj.core.api.SoftAssertions.assertSoftly;
+import static org.junit.jupiter.api.DynamicTest.dynamicTest;
+import static org.junit.platform.engine.discovery.DiscoverySelectors.selectClass;
+import static org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder.request;
 
 /**
  * Integration tests which verify that '<i>before</i>' and '<i>after</i>'
@@ -106,27 +105,20 @@ class FailingBeforeAndAfterMethodsSpringExtensionTests {
 		int expectedSucceededCount = getExpectedSucceededCount(testClass);
 		int expectedFailedCount = getExpectedFailedCount(testClass);
 
-		// @formatter:off
-		assertAll(
-			() -> assertEquals(1, summary.getTestsFoundCount(), () -> name + ": tests found"),
-			() -> assertEquals(0, summary.getTestsSkippedCount(), () -> name + ": tests skipped"),
-			() -> assertEquals(0, summary.getTestsAbortedCount(), () -> name + ": tests aborted"),
-			() -> assertEquals(expectedStartedCount, summary.getTestsStartedCount(), () -> name + ": tests started"),
-			() -> assertEquals(expectedSucceededCount, summary.getTestsSucceededCount(), () -> name + ": tests succeeded"),
-			() -> assertEquals(expectedFailedCount, summary.getTestsFailedCount(), () -> name + ": tests failed")
-		);
-		// @formatter:on
+		assertSoftly(softly -> {
+			softly.assertThat(summary.getTestsFoundCount()).as("%s: tests found", name).isEqualTo(1);
+			softly.assertThat(summary.getTestsSkippedCount()).as("%s: tests skipped", name).isEqualTo(0);
+			softly.assertThat(summary.getTestsAbortedCount()).as("%s: tests aborted", name).isEqualTo(0);
+			softly.assertThat(summary.getTestsStartedCount()).as("%s: tests started", name).isEqualTo(expectedStartedCount);
+			softly.assertThat(summary.getTestsSucceededCount()).as("%s: tests succeeded", name).isEqualTo(expectedSucceededCount);
+			softly.assertThat(summary.getTestsFailedCount()).as("%s: tests failed", name).isEqualTo(expectedFailedCount);
+		});
 
-		// Ensure it was an AssertionFailedError that failed the test and not
+		// Ensure it was an AssertionError that failed the test and not
 		// something else like an error in the @Configuration class, etc.
 		if (expectedFailedCount > 0) {
-			assertEquals(1, listener.exceptions.size(), "exceptions expected");
-			Throwable exception = listener.exceptions.get(0);
-			if (!(exception instanceof AssertionFailedError)) {
-				throw new AssertionFailedError(
-					exception.getClass().getName() + " is not an instance of " + AssertionFailedError.class.getName(),
-					exception);
-			}
+			assertThat(listener.exceptions).as("exceptions expected").hasSize(1);
+			assertThat(listener.exceptions.get(0)).isInstanceOf(AssertionError.class);
 		}
 	}
 
