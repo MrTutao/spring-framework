@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.springframework.web.util.pattern;
 
 import java.util.Comparator;
@@ -36,18 +37,21 @@ public class PathPatternRouteMatcher implements RouteMatcher {
 
 	private final PathPatternParser parser;
 
+	private final String separator;
+
 	private final Map<String, PathPattern> pathPatternCache = new ConcurrentHashMap<>();
 
 
 	public PathPatternRouteMatcher(PathPatternParser parser) {
 		Assert.notNull(parser, "PathPatternParser must not be null");
 		this.parser = parser;
+		this.separator = String.valueOf(parser.getSeparator());
 	}
 
 
 	@Override
 	public Route parseRoute(String routeValue) {
-		return new PathContainerRoute(PathContainer.parsePath(routeValue));
+		return new PathContainerRoute(PathContainer.parsePath(routeValue, this.separator));
 	}
 
 	@Override
@@ -100,6 +104,12 @@ public class PathPatternRouteMatcher implements RouteMatcher {
 		@Override
 		public String value() {
 			return this.pathContainer.value();
+		}
+
+
+		@Override
+		public String toString() {
+			return value();
 		}
 	}
 
